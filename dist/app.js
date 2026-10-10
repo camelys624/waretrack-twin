@@ -3,6 +3,26 @@ import { OrbitControls } from './vendor/OrbitControls.js';
 import { createSimulation, stepSimulation, doorStatus, dockStatus, PHASE_NAMES, DOCK_Z, YARD_Z } from './simulation.js';
 
 const $ = s => document.querySelector(s);
+// Keep interactive elements mounted while their live text and attributes change.
+function updateMarkup(element,markup){
+  if(element.innerHTML===markup)return;
+  const template=document.createElement('template');template.innerHTML=markup;
+  if(!template.content||!element.childNodes){element.innerHTML=markup;return;}
+  function patch(parent,nextParent){
+    const nextNodes=Array.from(nextParent.childNodes);
+    for(let i=0;i<nextNodes.length;i++){
+      const next=nextNodes[i],current=parent.childNodes[i];
+      if(!current){parent.appendChild(next.cloneNode(true));continue;}
+      if(current.nodeType!==next.nodeType||current.nodeName!==next.nodeName){current.replaceWith(next.cloneNode(true));continue;}
+      if(current.nodeType!==1){if(current.nodeValue!==next.nodeValue)current.nodeValue=next.nodeValue;continue;}
+      for(const attribute of Array.from(current.attributes))if(!next.hasAttribute(attribute.name))current.removeAttribute(attribute.name);
+      for(const attribute of Array.from(next.attributes))if(current.getAttribute(attribute.name)!==attribute.value)current.setAttribute(attribute.name,attribute.value);
+      patch(current,next);
+    }
+    while(parent.childNodes.length>nextNodes.length)parent.lastChild.remove();
+  }
+  patch(element,template.content);
+}
 const icon = name => `<svg class="icon"><use href="#i-${name}"/></svg>`;
 const vehicles = [
   {id:'TRK-2148',company:'蓝峰冷链',english:'BLUEPEAK COLD CHAIN',driver:'刘志远',plate:'沪 D·2148',bay:2,shipment:'SHP-78468',customer:'海港食品有限公司',cargo:'6 / 8 托盘 · 1,280 kg',status:'卸货中',color:'green',eta:'09:38 · 已到达',position:[-8,-1.5],progress:83},
@@ -21,8 +41,8 @@ const defaultCamera={position:[48,43,53],target:[0,0,1]};
 const message = text => { $('#toast').textContent=text;$('#toast').classList.add('visible');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>$('#toast').classList.remove('visible'),2800); };
 const timeString = () => {const seconds=9*3600+50*60+Math.floor(simSeconds);return [Math.floor(seconds/3600),Math.floor(seconds%3600/60),seconds%60].map(v=>String(v).padStart(2,'0')).join(':');};
 function detail(){
-  const v=selected,state=stateFor(v),moving=Math.abs(state.velocity)>.01;
-  $('#detail-card').innerHTML=`<div class="detail-top"><span class="truck-logo">${icon('truck')}</span><div><span class="carrier">${v.english}</span><h2>${v.id}</h2><small>${v.driver} · ${v.plate}</small></div><button id="locate-truck" class="icon-button" aria-label="定位车辆" title="定位车辆">${icon('target')}</button></div><div class="detail-separator"></div><div class="status-line"><span class="status-pill ${v.color}">${v.status}</span><span>${['approach','waiting','docking'].includes(state.phase)?'前往':'关联'} ${v.bay} 号月台 · WH-03</span></div><div class="progress-line"><span style="width:${v.progress}%"></span></div><div class="distance">${['approach','waiting','docking'].includes(state.phase)?`${Math.max(0,Math.round(state.z-DOCK_Z))} m 至月台`:state.phase==='unloading'?`装卸作业 · 第 ${state.cycles+1} 轮`:'园区循环作业'}</div><dl class="detail-rows"><div><dt>运单编号</dt><dd class="link">#${v.shipment}</dd></div><div><dt>客户</dt><dd>${v.customer}</dd></div><div><dt>目的地</dt><dd>WH-03 临港冷链仓</dd></div><div><dt>预计到达</dt><dd>${v.eta}</dd></div><div><dt>实时速度</dt><dd>${running?Math.round(Math.abs(state.velocity)*3.6):0} km/h</dd></div><div><dt>仓库门联动</dt><dd class="link">${doorStatus(state.door)} · ${Math.round(state.door.open*100)}%</dd></div><div><dt>感应状态</dt><dd>${state.door.target?'检测到车辆 · 保持开启':'车辆已离开感应区'}</dd></div><div><dt>目标月台</dt><dd class="link">月台 ${v.bay} · WH-03</dd></div><div><dt>运输货物</dt><dd>${v.cargo}</dd></div></dl><div class="detail-footer"><span><i></i> GPS 信号正常</span><button id="open-shipment">查看运单 ↗</button></div>`;
+  const v=selected,state=stateFor(v);
+  updateMarkup($('#detail-card'),`<div class="detail-top"><span class="truck-logo">${icon('truck')}</span><div><span class="carrier">${v.english}</span><h2>${v.id}</h2><small>${v.driver} · ${v.plate}</small></div><button id="locate-truck" class="icon-button" aria-label="定位车辆" title="定位车辆">${icon('target')}</button></div><div class="detail-separator"></div><div class="status-line"><span class="status-pill ${v.color}">${v.status}</span><span>${['approach','waiting','docking'].includes(state.phase)?'前往':'关联'} ${v.bay} 号月台 · WH-03</span></div><div class="progress-line"><span style="width:${v.progress}%"></span></div><div class="distance">${['approach','waiting','docking'].includes(state.phase)?`${Math.max(0,Math.round(state.z-DOCK_Z))} m 至月台`:state.phase==='unloading'?`装卸作业 · 第 ${state.cycles+1} 轮`:'园区循环作业'}</div><dl class="detail-rows"><div><dt>运单编号</dt><dd class="link">#${v.shipment}</dd></div><div><dt>客户</dt><dd>${v.customer}</dd></div><div><dt>目的地</dt><dd>WH-03 临港冷链仓</dd></div><div><dt>预计到达</dt><dd>${v.eta}</dd></div><div><dt>实时速度</dt><dd>${running?Math.round(Math.abs(state.velocity)*3.6):0} km/h</dd></div><div><dt>仓库门联动</dt><dd class="link">${doorStatus(state.door)} · ${Math.round(state.door.open*100)}%</dd></div><div><dt>感应状态</dt><dd>${state.door.target?'检测到车辆 · 保持开启':'车辆已离开感应区'}</dd></div><div><dt>目标月台</dt><dd class="link">月台 ${v.bay} · WH-03</dd></div><div><dt>运输货物</dt><dd>${v.cargo}</dd></div></dl><div class="detail-footer"><span><i></i> GPS 信号正常</span><button id="open-shipment">查看运单 ↗</button></div>`);
   $('#locate-truck').onclick=()=>focusVehicle(v); $('#open-shipment').onclick=shipmentDialog;
   $('#tracking-truck').textContent=`${v.id} · ${v.company}`;$('#shipment-id').textContent='#'+v.shipment;$('#shipment-state').textContent='● '+v.status;
   const done=state.arrived;
@@ -34,7 +54,7 @@ function assetList(){
   if(activeTab==='trucks')rows=vehicles.map(v=>`<button class="asset-row ${v.id===selected.id?'selected':''}" data-vehicle="${v.id}"><span><strong>${v.id}</strong><small>${v.company}</small></span><span class="asset-location"><i></i>${['unloading','docking','waiting'].includes(stateFor(v).phase)?'月台 '+v.bay:stateFor(v).phase==='departing'?'驶离 WH-03':stateFor(v).phase==='standby'?'园区待命':'前往 WH-03'}</span><span class="status-pill ${v.color}">${v.status}</span>${icon('chevron')}</button>`).join('');
   if(activeTab==='docks')rows=[1,2,3].map(bay=>{const v=vehicles.find(v=>v.bay===bay),state=stateFor(v);return `<button class="asset-row" data-dock="${bay}"><span><strong>DOCK-0${bay}</strong><small>仓库门 ${doorStatus(state.door)}</small></span><span class="asset-location"><i></i>${v.id}</span><span class="status-pill ${v.color}">${dockStatus(state)}</span>${icon('chevron')}</button>`;}).join('');
   if(activeTab==='forklifts')rows=[['FL-001','84%','作业中','green'],['FL-002','67%','作业中','green'],['FL-003','18%','待充电','orange']].map(v=>`<button class="asset-row" data-forklift="${v[0]}"><span><strong>${v[0]}</strong><small>电动平衡重叉车</small></span><span class="asset-location"><i></i>电量 ${v[1]}</span><span class="status-pill ${v[3]}">${v[2]}</span>${icon('chevron')}</button>`).join('');
-  $('#asset-list').innerHTML=rows;
+  updateMarkup($('#asset-list'),rows);
   document.querySelectorAll('[data-vehicle]').forEach(b=>b.onclick=()=>selectVehicle(b.dataset.vehicle,true));
   document.querySelectorAll('[data-dock]').forEach(b=>b.onclick=()=>dockDialog(Number(b.dataset.dock)));
   document.querySelectorAll('[data-forklift]').forEach(b=>b.onclick=()=>forkliftDialog(b.dataset.forklift));
@@ -42,7 +62,7 @@ function assetList(){
 function setTab(tab){activeTab=tab;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));assetList();}
 function selectVehicle(id,focus=false){selected=vehicles.find(v=>v.id===id);detail();assetList();$('#workspace').classList.add('detail-open');sceneLabels.filter(l=>l.vehicle).forEach(l=>l.element.classList.toggle('selected',l.vehicle===selected.id));if(focus)focusVehicle(selected);}
 function focusVehicle(v){if(!sceneReady)return;const mesh=truckMeshes.find(m=>m.userData.vehicle===v.id),p=mesh.position;controls.target.set(p.x,0,p.z);camera.position.set(p.x+28,30,p.z+34);camera.zoom=1.3;camera.updateProjectionMatrix();controls.update();message('已定位 '+v.id);}
-function showDialog(content){activeDialogBay=null;$('#dialog-content').innerHTML=content;$('#info-dialog').showModal();}
+function showDialog(content){activeDialogBay=null;updateMarkup($('#dialog-content'),content);$('#info-dialog').showModal();}
 function shipmentDialog(){const v=selected;showDialog(`<span class="dialog-eyebrow">SHIPMENT DETAILS / 运单详情</span><h2>#${v.shipment}</h2><table class="dialog-table"><tr><td>运输承运商</td><td>${v.company}</td></tr><tr><td>配送客户</td><td>${v.customer}</td></tr><tr><td>起运仓库</td><td>苏州食品分拨中心</td></tr><tr><td>目的仓库</td><td>WH-03 临港冷链仓 · ${v.bay} 号月台</td></tr><tr><td>司机 / 车牌</td><td>${v.driver} / ${v.plate}</td></tr><tr><td>运输货物</td><td>${v.cargo}</td></tr><tr><td>温控要求</td><td>−18°C ± 2°C</td></tr><tr><td>当前温度</td><td><span class="change">−18.2°C · 温度正常</span></td></tr><tr><td>当前状态</td><td>${v.status}</td></tr></table><p>运单与车辆状态随园区模拟更新。本项目展示数字孪生交互，数据为演示数据。</p>`);}
 function dockDialog(bay){const v=vehicles.find(v=>v.bay===bay),state=stateFor(v);showDialog(`<span class="dialog-eyebrow">DOCK MANAGEMENT / 月台作业</span><h2>冷链月台 ${bay}</h2><div class="dialog-grid"><div class="dialog-stat"><small>当前状态</small><b style="font-size:18px">${dockStatus(state)}</b></div><div class="dialog-stat"><small>今日吞吐</small><b>${[126,148,92][bay-1]}<small>托盘</small></b></div><div class="dialog-stat"><small>利用率</small><b>${[76,82,63][bay-1]}%</b></div></div><table class="dialog-table"><tr><td>预约车辆</td><td>${v.id} · ${v.plate}</td></tr><tr><td>运单编号</td><td>#${v.shipment}</td></tr><tr><td>仓库门状态</td><td>${doorStatus(state.door)} · ${Math.round(state.door.open*100)}%</td></tr><tr><td>车辆联动</td><td>接近自动开门 · 门开到位才允许停靠 · 驶离自动关门</td></tr><tr><td>装卸设备</td><td>液压登车桥 · 状态正常</td></tr><tr><td>温控分区</td><td>冷冻 A 区 / −18°C</td></tr></table><button class="dialog-action" id="dock-locate">定位预约车辆</button>`);activeDialogBay=bay;$('#dock-locate').onclick=()=>{$('#info-dialog').close();selectVehicle(v.id,true);};}
 function forkliftDialog(id){const index=Number(id.slice(-1))-1;showDialog(`<span class="dialog-eyebrow">EQUIPMENT / 设备信息</span><h2>${id} 电动叉车</h2><div class="dialog-grid"><div class="dialog-stat"><small>设备电量</small><b>${[84,67,18][index]}%</b></div><div class="dialog-stat"><small>今日搬运</small><b>${[68,52,36][index]}</b></div><div class="dialog-stat"><small>额定载重</small><b>2.5<small>吨</small></b></div></div><table class="dialog-table"><tr><td>运行状态</td><td>${index===2?'待充电':'作业中'}</td></tr><tr><td>当前位置</td><td>${index===2?'设备补给区':'冷链仓 · '+(index+1)+'号月台'}</td></tr><tr><td>今日运行时间</td><td>${[3.2,2.8,2.1][index]} 小时</td></tr><tr><td>保养状态</td><td>正常 · 下次保养 2026-11-01</td></tr></table>`);}
@@ -77,8 +97,8 @@ function warehouse(x,z,w,d,name){const g=new THREE.Group();g.position.set(x,0,z)
     box(3.65,3.7,.16,'#d8e3f3',0,0,0,shutter);
     for(let stripe=0;stripe<9;stripe++)box(3.63,.045,.03,'#adc3e0',0,-1.7+stripe*.4,.1,shutter,false);
     box(3.65,.1,.22,'#7897c1',0,-1.8,.04,shutter);
-    const indicator=box(.24,.24,.15,'#36bd8e',dx+2.55,4.3,d/2+.45,g);
-    indicator.material=new THREE.MeshBasicMaterial({color:'#36bd8e'});
+    const indicator=box(.24,.24,.15,'#e67768',dx+2.55,4.3,d/2+.45,g);
+    indicator.material=new THREE.MeshBasicMaterial({color:'#e67768'});
     if(bay){dockMeshes.set(bay,{shutter,indicator});addLabel(`月台 ${bay} · ${doorStatus(stateFor(vehicles.find(v=>v.bay===bay)).door)}`,[x+dx,5.6,z+d/2+.8],null,false,bay);}
     box(3.45,.8,.55,'#526e9b',dx,.75,d/2+.8,g);box(4,.35,2.5,'#c2cfe3',dx,.48,d/2+1.45,g);
     sign('0'+(bay||1),1.1,.7,dx,5.55,d/2+.25,g,'#5576ac');
@@ -144,6 +164,8 @@ function applySimulationModels(){
 }
 function syncSimulationUI(){
   syncVehicleState();detail();assetList();
+  const occupied=simulation.fleet.filter(v=>['waiting','docking','unloading'].includes(v.phase)).length;
+  $('#active-dock-count').textContent=occupied+' / 6';$('#dock-tab-count').textContent=occupied+'/6';
   for(const label of sceneLabels){
     if(label.vehicle){const v=vehicles.find(v=>v.id===label.vehicle);label.element.innerHTML=`<i class="label-dot"></i>${v.id}<small>${v.status}</small>`;}
     if(label.dock){const state=simulation.fleet.find(v=>v.bay===label.dock);label.element.innerHTML=`月台 ${label.dock} · ${doorStatus(state.door)}`;label.element.classList.toggle('door-open',state.door.open>=.999);}
