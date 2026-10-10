@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f3f6fb"><meta name="description" content="WareTrack 智慧物流数字孪生：实时探索三维物流园区，追踪车辆、货物与月台作业。">
+  <title>WareTrack · 智慧物流数字孪生</title>
+  <link rel="stylesheet" href="styles.css?v=2">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
+</head>
+<body>
+<svg class="icon-defs" xmlns="http://www.w3.org/2000/svg"><defs>
+<symbol id="i-cube" viewBox="0 0 24 24"><path d="m12 3 9 5v9l-9 5-9-5V8l9-5Z M3 8l9 5 9-5M12 13v9M7.5 5.5l9 5"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="i-truck" viewBox="0 0 24 24"><path d="M3 5h12v12H3zM15 9h4l3 4v4h-7M15 13h7"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 3v17h17M8 15v-4M13 15V7M18 15V4"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+<symbol id="i-box" viewBox="0 0 24 24"><path d="M3 7h18v14H3zM3 7l3-4h12l3 4M8 7v5h8V7"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M5 17h14l-2-3V9a5 5 0 0 0-10 0v5l-2 3ZM10 21h4M12 2v2"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><path d="m9 3-1 3-3 1-2 3 2 2-1 3 2 3 3-1 3 3 3-3 3 1 2-3-1-3 2-2-2-3-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></symbol>
+<symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 10 6-10 6L2 9l10-6ZM3 14l9 5 9-5M3 18l9 5 9-5"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9"/></symbol>
+<symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8Z"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4 10-10"/></symbol>
+<symbol id="i-fork" viewBox="0 0 24 24"><path d="M3 15h11v4H3zM6 15V7h7v8M16 4v15h6M19 4v12h3"/><circle cx="6" cy="20" r="2"/><circle cx="12" cy="20" r="2"/></symbol>
+</defs></svg>
+<header class="topbar">
+  <a class="brand" href="./" aria-label="WareTrack 首页"><span class="brand-mark"><svg><use href="#i-cube"/></svg></span><span>Ware<span class="brand-light">Track</span><small>智慧物流数字孪生</small></span></a>
+  <div class="search-wrap"><svg class="icon"><use href="#i-search"/></svg><input id="search" type="search" placeholder="搜索车辆、月台、运单…" aria-label="搜索园区资产"><kbd>/</kbd><div id="search-results" class="search-results" hidden></div></div>
+  <div class="header-right"><button id="park-button" class="park-selector"><span class="warehouse-badge">WH-03</span><span><strong>临港智慧物流园</strong><small>仓储使用率 71% · 3 / 6 月台作业中</small></span><span class="down">⌄</span></button><span class="live"><i></i> 实时 <span id="clock">09:50:00</span></span><button class="icon-button notification-button" id="notification" aria-label="查看通知"><svg class="icon"><use href="#i-bell"/></svg><i></i></button><span class="user-avatar">陈</span><span class="user-name"><strong>陈子安</strong><small>园区运营管理员</small></span></div>
+</header>
+<aside class="sidebar"><div class="nav-top"><button class="nav-button active" data-nav="twin" title="数字孪生"><svg class="icon"><use href="#i-cube"/></svg><span>孪生</span></button><button class="nav-button" data-nav="trucks" title="车辆管理"><svg class="icon"><use href="#i-truck"/></svg><span>车辆</span></button><button class="nav-button" data-nav="docks" title="月台管理"><svg class="icon"><use href="#i-box"/></svg><span>月台</span></button><button class="nav-button" data-nav="analytics" title="运营分析"><svg class="icon"><use href="#i-chart"/></svg><span>分析</span></button></div><button class="nav-button" id="settings-button" title="显示设置"><svg class="icon"><use href="#i-settings"/></svg><span>设置</span></button></aside>
+<main class="workspace" id="workspace">
+  <div id="scene" aria-label="可交互三维物流园区，拖动旋转，滚轮缩放"><div id="loading"><span class="loading-cube">◇</span>正在构建数字园区…</div></div><div id="labels"></div>
+  <div class="scene-heading"><div><span class="eyebrow">DIGITAL TWIN / 园区总览</span><h1>物流运行，一目了然<span class="heading-dot"></span></h1></div><div class="scene-heading-right"><span class="simulation-tag">模拟数据</span><button id="layer-button" class="subtle-button"><svg class="icon"><use href="#i-layers"/></svg> 图层 <span>⌄</span></button><button id="fullscreen" class="icon-button" aria-label="全屏显示"><svg class="icon"><use href="#i-expand"/></svg></button></div></div>
+  <section class="metrics" aria-label="园区关键指标">
+    <article class="metric"><span class="metric-icon blue"><svg class="icon"><use href="#i-box"/></svg></span><div><span class="metric-title">在库货物</span><div class="metric-value">990 <span class="change">↗ 20</span></div><small>托盘 <span>· WH-03</span></small></div><div class="sparkline"><svg viewBox="0 0 75 30"><path d="M0 27 10 23 20 25 30 14 40 17 50 8 60 11 75 2"/></svg></div></article>
+    <article class="metric"><span class="metric-icon cyan"><svg class="icon"><use href="#i-truck"/></svg></span><div><span class="metric-title">园区车辆</span><div class="metric-value">3 <span class="change">↗ 1</span></div><small>辆 <span>· 1 辆正在进场</span></small></div><span class="metric-end">↗</span></article>
+    <article class="metric"><span class="metric-icon violet"><svg class="icon"><use href="#i-clock"/></svg></span><div><span class="metric-title">准时交付率</span><div class="metric-value">96.0<span class="percent">%</span> <span class="change">↗ 0.4%</span></div><small>过去 30 天 <span>· 持续提升</span></small></div><svg class="mini-ring" viewBox="0 0 40 40"><circle cx="20" cy="20" r="15"/><circle cx="20" cy="20" r="15" class="ring-progress"/></svg></article>
+  </section>
+  <div class="scene-status"><i></i> 园区设备在线 <b>24 / 24</b><span>最后同步 <span id="sync-time">09:50:00</span></span></div>
+  <div class="view-controls"><button id="zoom-in" aria-label="放大" title="放大">+</button><button id="zoom-out" aria-label="缩小" title="缩小">−</button><span></span><button id="rotate" aria-label="旋转视角" title="旋转视角">↻</button><button id="top-view" aria-label="俯视视角" title="俯视视角"><svg class="icon"><use href="#i-grid"/></svg></button><button id="reset-view" aria-label="重置视角" title="重置视角"><svg class="icon"><use href="#i-home"/></svg></button></div>
+  <section class="detail-card glass" id="detail-card" aria-label="车辆详情"></section>
+  <div class="scene-caption"><span class="compass">N <i>↑</i></span><span>拖动旋转 · 滚轮缩放 · 点击资产查看</span><span class="scale">━━━━ <small>20 m</small></span></div>
+  <div class="bottom-panels"><section class="tracking glass"><div class="panel-heading"><div><svg class="icon"><use href="#i-truck"/></svg><h2>运输进度</h2><span class="soft-badge">在途追踪</span></div><small id="tracking-truck">TRK-2603 · 蓝峰冷链</small></div><div class="tracking-content"><div id="timeline" class="timeline"></div><button id="shipment-card" class="shipment-card"><span class="shipment-icon"><svg class="icon"><use href="#i-box"/></svg></span><div><strong id="shipment-id">#SHP-78472</strong><small>发往 WH-03 临港冷链仓</small><span id="shipment-state">● 正在驶入月台</span></div><svg class="icon chevron"><use href="#i-chevron"/></svg></button></div></section>
+  <section class="asset-panel glass"><div class="asset-tabs"><button data-tab="docks">月台 <span>3/6</span></button><button data-tab="forklifts">叉车 <span>2/3</span></button><button data-tab="trucks" class="active">车辆 <span>3</span></button><small>WH-03</small></div><div id="asset-list"></div></section></div>
+  <div class="simulation-bar"><button id="simulation-toggle"><svg class="icon"><use href="#i-play"/></svg><span>运行模拟</span></button><span class="simulation-divider"></span><span>三车循环 · 车门联动</span><button id="speed-button" title="切换模拟速度">1×</button><button id="simulation-reset" title="重置模拟">↺</button></div>
+  <div id="layer-popover" class="popover layer-popover" hidden><strong>场景图层</strong><label><input type="checkbox" id="show-labels" checked> 资产标签</label><label><input type="checkbox" id="show-route" checked> 运输路径</label><label><input type="checkbox" id="show-trees" checked> 园区绿化</label><small>拖动场景探索三维园区</small></div>
+  <div id="park-popover" class="popover park-popover" hidden><strong>当前园区</strong><div class="park-option"><span class="warehouse-badge">WH-03</span><div>临港智慧物流园<small>冷链仓储 · 上海临港</small></div><span class="change">✓</span></div><small>演示园区面积 12,800 m²</small></div>
+  <div id="notification-popover" class="popover notification-popover" hidden><strong>园区动态 <span class="soft-badge">2 条</span></strong><p><i class="event-dot"></i><b>TRK-2603 已进入园区</b><small>09:49 · 前往 3 号月台</small></p><p><i class="event-dot orange"></i><b>叉车 FL-003 待充电</b><small>09:46 · 当前电量 18%</small></p></div>
+  <div id="toast" role="status"></div>
+  <dialog id="info-dialog"><button class="dialog-close" aria-label="关闭">×</button><div id="dialog-content"></div></dialog>
+</main>
+<script type="module" src="app.js?v=2"></script>
+</body></html>

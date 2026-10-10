@@ -1,0 +1,11 @@
+{
+  "name": "waretrack-logistics-twin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "智慧物流三维数字孪生交互原型",
+  "scripts": {
+    "start": "python3 -m http.server 8080 --directory dist",
+    "check": "node checks/validate.mjs"
+  }
+}
