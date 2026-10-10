@@ -42,12 +42,12 @@ function syncVehicleState(){
 syncVehicleState();
 let scene,camera,renderer,controls,routeGroup,greenery,selectionRing,marker;
 let lastFrame=performance.now(),sceneReady=false,toastTimeout; const truckMeshes=[],sceneLabels=[];
-const defaultCamera={position:[48,43,53],target:[0,0,4],zoom:1};
+const defaultCamera={position:[48,43,53],target:[4,0,4],zoom:1.25};
 const message = text => { $('#toast').textContent=text;$('#toast').classList.add('visible');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>$('#toast').classList.remove('visible'),2800); };
 const timeString = () => {const seconds=9*3600+50*60+Math.floor(simSeconds);return [Math.floor(seconds/3600),Math.floor(seconds%3600/60),seconds%60].map(v=>String(v).padStart(2,'0')).join(':');};
 function detail(){
   const v=selected,state=stateFor(v),dock=simulation.docks.find(d=>d.bay===v.bay);
-  const ring=ringChart([{name:'已装货',color:'#58d6ff',value:state.loaded},{name:'空余',color:'#203750',value:state.capacity-state.loaded}],Math.round(state.loaded/state.capacity*100)+'%','装载率',116);
+  const ring=ringChart([{name:'已装货',color:'#4c88ed',value:state.loaded},{name:'空余',color:'#e6eefb',value:state.capacity-state.loaded}],Math.round(state.loaded/state.capacity*100)+'%','装载率',116);
   updateMarkup($('#detail-card'),`<div class="chart-heading"><h2>${v.id}</h2><span class="status-pill ${v.color}">${shortPhase[state.phase]}</span><button id="locate-truck" class="icon-button" aria-label="定位车辆" title="定位车辆">${icon('target')}</button></div><div class="vehicle-visual">${ring}<div class="vehicle-values"><div><strong>${running?Math.round(state.velocity*3.6):0}</strong><small>km/h</small></div><div class="door-number"><strong>${Math.round(dock.door.open*100)}<em>%</em></strong><small><i class="state-dot ${dock.door.open>=.999?'is-open':''}"></i>仓库门</small></div></div></div><div class="vehicle-chart-footer"><span><i class="live-dot"></i>${state.loaded} / 8 托盘</span><span>月台 0${v.bay}</span><button id="open-shipment" class="icon-button" aria-label="查看运单详情" title="运单详情">${icon('box')}</button></div>`);
   $('#locate-truck').onclick=()=>focusVehicle(v);$('#open-shipment').onclick=shipmentDialog;
 }
@@ -69,7 +69,7 @@ function assetList(){
 }
 
 function setTab(tab){activeTab=tab;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));assetList();}
-function selectVehicle(id,focus=false){selected=vehicles.find(v=>v.id===id)??selected;detail();assetList();$('#workspace').classList.add('detail-open');sceneLabels.filter(l=>l.vehicle).forEach(l=>l.element.classList.toggle('selected',l.vehicle===selected.id));if(focus)focusVehicle(selected);}
+function selectVehicle(id,focus=false){selected=vehicles.find(v=>v.id===id)??selected;detail();assetList();$('#workspace').classList.add('detail-open');if(innerWidth<=800){$('#workspace').classList.add('charts-open');$('#charts-button').setAttribute('aria-expanded','true');}sceneLabels.filter(l=>l.vehicle).forEach(l=>l.element.classList.toggle('selected',l.vehicle===selected.id));if(focus)focusVehicle(selected);}
 function focusVehicle(v){if(!sceneReady)return;const mesh=truckMeshes.find(m=>m.userData.vehicle===v.id),p=mesh.position;controls.target.set(p.x,0,p.z);camera.position.set(p.x+28,30,p.z+34);camera.zoom=1.3;camera.updateProjectionMatrix();controls.update();message('已定位 '+v.id);}
 function showDialog(content){activeDialogBay=null;activeDialogFork=null;activeDialogReceiving=false;updateMarkup($('#dialog-content'),content);$('#info-dialog').showModal();}
 function shipmentDialog(){const v=selected;showDialog(`<span class="dialog-eyebrow">SHIPMENT DETAILS / 运单详情</span><h2>#${v.shipment}</h2><table class="dialog-table"><tr><td>运输承运商</td><td>${v.company}</td></tr><tr><td>配送客户</td><td>${v.customer}</td></tr><tr><td>起运仓库</td><td>WH-03 临港冷链仓 · ${v.bay} 号月台</td></tr><tr><td>目的仓库</td><td>城市冷链配送中心</td></tr><tr><td>司机 / 车牌</td><td>${v.driver} / ${v.plate}</td></tr><tr><td>运输货物</td><td>${v.cargo}</td></tr><tr><td>温控要求</td><td>−18°C ± 2°C</td></tr><tr><td>当前温度</td><td><span class="change">−18.2°C · 温度正常</span></td></tr><tr><td>当前状态</td><td>${v.status}</td></tr></table><p>运单与车辆状态随园区模拟更新。本项目展示数字孪生交互，数据为演示数据。</p>`);}
@@ -91,17 +91,17 @@ function surfaceText(text,color='#5b77a4',background=null){const canvas=document
 function sign(text,w,h,x,y,z,parent=scene,color){const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),surfaceText(text,color));mesh.position.set(x,y,z);parent.add(mesh);return mesh;}
 function line(points,color,width=.035,parent=scene){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,Math.max(points.length*5,2),width,5,false),material(color));parent.add(mesh);return mesh;}
 function warehouse(x,z,w,d,name){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
-  box(w+1,.45,d+1,'#dae2ef',0,.2,0,g);box(w,7,d-.8,'#9bb4d3',0,3.8,-.4,g);
-  box(w,2.8,.8,'#9bb4d3',0,5.9,d/2-.4,g);
-  box(w+.7,.35,d+.7,'#728cac',0,7.55,0,g);box(w+.8,.25,.5,'#6a8cc5',0,7.8,d/2+.12,g);box(.4,.4,d+.5,'#acc0df',-w/2,7.7,0,g);box(.4,.4,d+.5,'#acc0df',w/2,7.7,0,g);
+  box(w+1,.45,d+1,'#dae2ef',0,.2,0,g);box(w,7,d-.8,'#f6f8fd',0,3.8,-.4,g);
+  box(w,2.8,.8,'#f6f8fd',0,5.9,d/2-.4,g);
+  box(w+.7,.35,d+.7,'#c4d2e7',0,7.55,0,g);box(w+.8,.25,.5,'#6a8cc5',0,7.8,d/2+.12,g);box(.4,.4,d+.5,'#acc0df',-w/2,7.7,0,g);box(.4,.4,d+.5,'#acc0df',w/2,7.7,0,g);
   for(let p=-w/2+1;p<w/2;p+=2)box(.05,6.8,.045,'#dde5f0',p,3.7,d/2+.02,g,false);
   for(let p=-d/2+1;p<d/2;p+=2)box(.045,6.8,.05,'#dce4ef',w/2+.02,3.7,p,g,false);
   box(w,.9,.1,'#dce6f4',0,6.6,d/2+.08,g); sign(name,w*.6,1.2,0,6.7,d/2+.15,g,'#607b9e');
-  for(let roofX=-w/2+4;roofX<w/2;roofX+=7){box(4,.18,2.2,'#a7bcdb',roofX,7.9,-1,g);for(let i=0;i<5;i++)box(.045,.01,2.2,'#d5e0f1',roofX-1.6+i*.8,8,-1,g,false);box(2.2,.8,1.8,'#94aac7',roofX,8,3,g);for(const fanX of [-.5,.5]){cylinder(.42,.06,'#bac9de',roofX+fanX,8.45,3,g,18);cylinder(.18,.075,'#dce5f1',roofX+fanX,8.49,3,g,12);}}
+  for(let roofX=-w/2+4;roofX<w/2;roofX+=7){box(4,.18,2.2,'#a7bcdb',roofX,7.9,-1,g);for(let i=0;i<5;i++)box(.045,.01,2.2,'#d5e0f1',roofX-1.6+i*.8,8,-1,g,false);box(2.2,.8,1.8,'#e6ebf3',roofX,8,3,g);for(const fanX of [-.5,.5]){cylinder(.42,.06,'#bac9de',roofX+fanX,8.45,3,g,18);cylinder(.18,.075,'#dce5f1',roofX+fanX,8.49,3,g,12);}}
   const docks=w>20?[-8,0,8]:[0];
   let wallStart=-w/2;
-  for(const dx of docks){const wallEnd=dx-2.1;if(wallEnd>wallStart)box(wallEnd-wallStart,4.3,.8,'#9bb4d3',(wallStart+wallEnd)/2,2.45,d/2-.4,g);wallStart=dx+2.1;}
-  if(wallStart<w/2)box(w/2-wallStart,4.3,.8,'#9bb4d3',(wallStart+w/2)/2,2.45,d/2-.4,g);
+  for(const dx of docks){const wallEnd=dx-2.1;if(wallEnd>wallStart)box(wallEnd-wallStart,4.3,.8,'#f6f8fd',(wallStart+wallEnd)/2,2.45,d/2-.4,g);wallStart=dx+2.1;}
+  if(wallStart<w/2)box(w/2-wallStart,4.3,.8,'#f6f8fd',(wallStart+w/2)/2,2.45,d/2-.4,g);
   docks.forEach((dx,i)=>{
     const bay=w>20?[2,1,3][i]:0;
     box(3.7,3.8,.12,'#32445f',dx,2.45,d/2-.5,g);
@@ -122,7 +122,7 @@ function warehouse(x,z,w,d,name){const g=new THREE.Group();g.position.set(x,0,z)
   });
   box(.7,7,.7,'#b8c9e2',w/2+.1,3.8,d/2-.2,g);return g;
 }
-function tree(x,z,size=1){const g=new THREE.Group();greenery.add(g);g.position.set(x,0,z);cylinder(.12,1.5,'#b5a79c',0,.8,0,g);const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(1.1,2),material('#4b9685'));crown.scale.set(.85,1.35,.85);crown.position.y=2.2;g.add(crown);crown.castShadow=true;const lower=new THREE.Mesh(new THREE.IcosahedronGeometry(.68,1),material('#62ad98'));lower.position.set(.28,1.6,.3);g.add(lower);g.scale.setScalar(size);}
+function tree(x,z,size=1){const g=new THREE.Group();greenery.add(g);g.position.set(x,0,z);cylinder(.12,1.5,'#b5a79c',0,.8,0,g);const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(1.1,2),material('#9dceb5'));crown.scale.set(.85,1.35,.85);crown.position.y=2.2;g.add(crown);crown.castShadow=true;const lower=new THREE.Mesh(new THREE.IcosahedronGeometry(.68,1),material('#b5dec2'));lower.position.set(.28,1.6,.3);g.add(lower);g.scale.setScalar(size);}
 function pallet(x,z,parent=scene){box(1.3,.15,1,'#bca88c',x,.65,z,parent);box(1.15,1.1,.9,'#f4f5f9',x,1.27,z,parent);box(1.16,.08,.91,'#d8e4f5',x,1.5,z,parent);box(1.18,.05,.94,'#8cacdf',x,.77,z,parent);}
 function forklift(state){
   const g=new THREE.Group();g.position.set(state.x,.48,state.z);g.rotation.y=state.yaw;scene.add(g);g.userData.forklift=state.id;g.userData.wheels=[];
@@ -156,25 +156,25 @@ function truck(v){const g=new THREE.Group();g.position.set(v.position[0],.53,v.p
 }
 function addLabel(text,position,vehicle=null,warehouseLabel=false,dock=null,forkliftId=null){const element=document.createElement('button');element.className='scene-label'+(warehouseLabel?' warehouse':'')+(dock?' dock-label':'')+(vehicle===selected.id?' selected':'');element.innerHTML=text;$('#labels').append(element);if(vehicle){element.setAttribute('aria-label','查看车辆 '+vehicle);element.onclick=()=>selectVehicle(vehicle);}else if(warehouseLabel){element.onclick=()=>dockDialog(1);}else if(dock){element.onclick=()=>dockDialog(dock);}else if(forkliftId){element.setAttribute('aria-label','查看叉车 '+forkliftId);element.classList.add('fork-label');element.onclick=()=>forkliftDialog(forkliftId);}const label={element,position:new THREE.Vector3(...position),vehicle,dock,forkliftId};sceneLabels.push(label);return label;}
 function createScene(){
-  scene=new THREE.Scene();scene.background=new THREE.Color('#081528');scene.fog=new THREE.Fog('#081528',95,170);
-  const host=$('#scene'),aspect=host.clientWidth/host.clientHeight,span=Math.max(32,50/aspect);camera=new THREE.OrthographicCamera(-span*aspect,span*aspect,span,-span,.1,250);camera.position.set(...defaultCamera.position);camera.lookAt(...defaultCamera.target);camera.zoom=defaultCamera.zoom;camera.updateProjectionMatrix();
-  renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setSize(host.clientWidth,host.clientHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;host.appendChild(renderer.domElement);
+  scene=new THREE.Scene();scene.background=new THREE.Color('#edf2fa');scene.fog=new THREE.Fog('#edf2fa',95,170);
+  const host=$('#scene'),aspect=host.clientWidth/host.clientHeight,span=Math.max(42,50/aspect);camera=new THREE.OrthographicCamera(-span*aspect,span*aspect,span,-span,.1,250);camera.position.set(...defaultCamera.position);camera.lookAt(...defaultCamera.target);camera.zoom=defaultCamera.zoom;camera.updateProjectionMatrix();
+  renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setSize(host.clientWidth,host.clientHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;host.appendChild(renderer.domElement);
   controls=new OrbitControls(camera,renderer.domElement);controls.target.set(...defaultCamera.target);controls.enableDamping=true;controls.dampingFactor=.07;controls.minZoom=.7;controls.maxZoom=3;controls.minPolarAngle=.12;controls.maxPolarAngle=Math.PI*.46;controls.maxDistance=150;controls.enablePan=true;controls.update();
-  scene.add(new THREE.HemisphereLight('#a2c4fa','#091628',2));const light=new THREE.DirectionalLight('#d5e7ff',2.7);light.position.set(-25,45,25);light.castShadow=true;light.shadow.mapSize.set(2048,2048);Object.assign(light.shadow.camera,{left:-55,right:55,top:55,bottom:-55,near:1,far:120});light.shadow.bias=-.0004;light.shadow.normalBias=.04;light.shadow.radius=3;scene.add(light);
-  box(260,.25,260,'#0a1729',0,-.7,0,scene,false);box(77,.7,66,'#142944',0,-.18,-1);box(70,.18,53,'#203a59',0,.25,-3,scene,false);
-  box(100,.04,11,'#142744',0,-.4,35,scene,false);box(100,.06,.3,'#fafcff',0,-.34,29.5,scene,false);box(100,.06,.3,'#fafcff',0,-.34,40.5,scene,false);for(let x=-48;x<49;x+=7)box(3,.04,.16,'#f1f7ff',x,-.35,35,scene,false);
-  box(77,.3,2.6,'#f5f8fc',0,.02,27.5);box(2.7,.3,45,'#f6f9fd',-37,.02,-10);box(2.4,.3,34,'#f6f9fd',37,.02,-15);box(76,.18,3,'#183d3b',0,.16,26.1,scene,false);box(2.7,.16,57,'#1a3e3b',-35,.15,-3,scene,false);
+  scene.add(new THREE.HemisphereLight('#ffffff','#b6c8e4',2.4));const light=new THREE.DirectionalLight('#fff7ee',3.5);light.position.set(-25,45,25);light.castShadow=true;light.shadow.mapSize.set(2048,2048);Object.assign(light.shadow.camera,{left:-55,right:55,top:55,bottom:-55,near:1,far:120});light.shadow.bias=-.0004;light.shadow.normalBias=.04;light.shadow.radius=3;scene.add(light);
+  box(260,.25,260,'#e7eef9',0,-.7,0,scene,false);box(77,.7,66,'#e7edf7',0,-.18,-1);box(70,.18,53,'#dfe8f5',0,.25,-3,scene,false);
+  box(100,.04,11,'#c3d5ef',0,-.4,35,scene,false);box(100,.06,.3,'#fafcff',0,-.34,29.5,scene,false);box(100,.06,.3,'#fafcff',0,-.34,40.5,scene,false);for(let x=-48;x<49;x+=7)box(3,.04,.16,'#f1f7ff',x,-.35,35,scene,false);
+  box(77,.3,2.6,'#f5f8fc',0,.02,27.5);box(2.7,.3,45,'#f6f9fd',-37,.02,-10);box(2.4,.3,34,'#f6f9fd',37,.02,-15);box(76,.18,3,'#d7e9e1',0,.16,26.1,scene,false);box(2.7,.16,57,'#d8eae2',-35,.15,-3,scene,false);
   greenery=new THREE.Group();scene.add(greenery);for(let x=-33;x<35;x+=6.5)tree(x,26.5,.85+(x%3)*.025);for(let z=-25;z<20;z+=7)tree(-35,z,.85);
   for(let x=-37;x<=35;x+=4){cylinder(.045,1.8,'#91acc5',x,1.04,28.1,scene,8);box(3.9,1.35,.025,'#c8dbe3',x+2,.98,28.1,scene,false);}box(73,.055,.055,'#a7bdcf',0,1.9,28.1);
   warehouse(0,-15,32,13,'WH-03 · COLD CHAIN');warehouse(-25,-11,9,20,'WH-02');
   for(const [x,z] of [[-35,14],[34,17]]){box(3,2.3,3,'#f5f8fc',x,1.55,z);box(3.4,.25,3.4,'#a5bbdc',x,2.9,z);box(2,1,.06,'#abc9e9',x,1.8,z+1.52);}
-  box(94,.035,6,'#1b3658',0,.43,ENTRY_Z,scene,false);box(94,.035,5.5,'#183943',0,.43,EXIT_Z,scene,false);
+  box(94,.035,6,'#d4e3f7',0,.43,ENTRY_Z,scene,false);box(94,.035,5.5,'#dceaf6',0,.43,EXIT_Z,scene,false);
   yardGate('entry',-34,ENTRY_Z);yardGate('exit',34,EXIT_Z);
   for(let x=-42;x<45;x+=7){line([[x-.4,.5,ENTRY_Z-.4],[x,.5,ENTRY_Z],[x-.4,.5,ENTRY_Z+.4]],'#94b4e9',.04);line([[x-.4,.5,EXIT_Z-.4],[x,.5,EXIT_Z],[x-.4,.5,EXIT_Z+.4]],'#87bfb6',.04);}
-  box(16,.03,3.5,'#21443f',-20,.45,6.2,scene,false);addLabel('待入库货物暂存区',[-20,1.5,5.5]);
+  box(16,.03,3.5,'#d9eee7',-20,.45,6.2,scene,false);addLabel('待入库货物暂存区',[-20,1.5,5.5]);
   for(const f of simulation.forklifts){const group=new THREE.Group();group.position.set(f.pickupX,0,6.35);scene.add(group);pallet(0,0,group);stagingPallets.set(f.id,group);forklift(f);}
   const receivingLabel=addLabel('入库门 · 已关闭',[-25,5.6,-.3]);receivingLabel.receiving=true;receivingLabel.element.classList.add('dock-label');receivingLabel.element.onclick=receivingDialog;
-  routeGroup=new THREE.Group();scene.add(routeGroup);line([[-45,.55,ENTRY_Z],[13.5,.55,ENTRY_Z]],'#4eb8fa',.07,routeGroup);line([[-8,.55,EXIT_Z],[45,.55,EXIT_Z]],'#54d8bf',.08,routeGroup);
+  routeGroup=new THREE.Group();scene.add(routeGroup);line([[-45,.55,ENTRY_Z],[13.5,.55,ENTRY_Z]],'#6e9bed',.07,routeGroup);line([[-8,.55,EXIT_Z],[45,.55,EXIT_Z]],'#74b4a7',.08,routeGroup);
   for(const x of [-8,0,8])for(let z=-4;z<8;z+=1.5)cylinder(.1,.025,'#7b9fdf',x,.57,z,routeGroup);
   line([[-25,.56,8],[-25,.56,2],[-25,.56,-3]],'#78bcab',.075,routeGroup);
   applySimulationModels();
@@ -182,7 +182,7 @@ function createScene(){
   marker=new THREE.Group();marker.position.set(8,.6,-.3);routeGroup.add(marker);const cone=new THREE.Mesh(new THREE.ConeGeometry(.65,1.55,20),material('#477bea'));cone.rotation.x=Math.PI;cone.position.y=2.4;marker.add(cone);const sphere=new THREE.Mesh(new THREE.SphereGeometry(.74,20,16),material('#477bea'));sphere.position.y=3.4;marker.add(sphere);const whiteDot=new THREE.Mesh(new THREE.SphereGeometry(.25,14,12),new THREE.MeshBasicMaterial({color:'white'}));whiteDot.position.set(.34,3.58,.59);marker.add(whiteDot);cylinder(.65,.03,'#477bea',0,.05,0,marker,32);
   addLabel('WH-03 <span>临港冷链仓</span>',[0,9,-16],null,true);addLabel('WH-02 <span>分拣中心</span>',[-25,9,-12],null,true).element.onclick=receivingDialog;
   let down;renderer.domElement.addEventListener('pointerdown',e=>down=[e.clientX,e.clientY]);renderer.domElement.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>5)return;const r=renderer.domElement.getBoundingClientRect();const ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),camera);const hit=ray.intersectObjects([...truckMeshes,...forkliftMeshes.values()],true)[0];if(hit?.object.userData.vehicle)selectVehicle(hit.object.userData.vehicle);else if(hit?.object.userData.forklift)forkliftDialog(hit.object.userData.forklift);else if(innerWidth<800)$('#workspace').classList.remove('detail-open');});
-  new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;const span=Math.max(32,50/(w/h));camera.left=-span*w/h;camera.right=span*w/h;camera.top=span;camera.bottom=-span;camera.updateProjectionMatrix();renderer.setSize(w,h);}).observe(host);
+  new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;const span=Math.max(42,50/(w/h));camera.left=-span*w/h;camera.right=span*w/h;camera.top=span;camera.bottom=-span;camera.updateProjectionMatrix();renderer.setSize(w,h);}).observe(host);
   $('#loading').remove();sceneReady=true;updateSimulationButton();animate();
 }
 function removeTruck(mesh){
@@ -232,6 +232,7 @@ detail();renderCharts();assetList();
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-nav]').forEach(n=>n.classList.toggle('active',n===b));if(b.dataset.nav==='analytics')analytics();else if(b.dataset.nav==='trucks'){setTab('trucks');message('车辆管理：点击车辆查看详情');}else if(b.dataset.nav==='docks'){setTab('docks');message('月台管理：点击月台查看作业');}else resetView();});
 const togglePopover=id=>{const target=$(id),was=target.hidden;document.querySelectorAll('.popover').forEach(p=>p.hidden=true);target.hidden=!was;};
+$('#charts-button').onclick=()=>{const expanded=$('#workspace').classList.toggle('charts-open');$('#charts-button').setAttribute('aria-expanded',String(expanded));};
 $('#layer-button').onclick=()=>togglePopover('#layer-popover');$('#settings-button').onclick=()=>togglePopover('#layer-popover');$('#park-button').onclick=()=>togglePopover('#park-popover');$('#notification').onclick=()=>togglePopover('#notification-popover');
 document.addEventListener('click',e=>{if(!e.target.closest('.popover,#layer-button,#settings-button,#park-button,#notification'))document.querySelectorAll('.popover').forEach(p=>p.hidden=true);if(!e.target.closest('.search-wrap'))$('#search-results').hidden=true;});
 $('#show-route').onchange=e=>{if(routeGroup)routeGroup.visible=e.target.checked;};$('#show-trees').onchange=e=>{if(greenery)greenery.visible=e.target.checked;};

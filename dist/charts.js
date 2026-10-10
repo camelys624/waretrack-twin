@@ -10,7 +10,7 @@ export function trackTelemetry(log,sim){
   if(sim.elapsed-log.lastSample>=1){log.history.push({time:sim.elapsed,inventory:sim.inventory});log.history=log.history.filter(point=>point.time>=sim.elapsed-60).slice(-61);log.lastSample=sim.elapsed;}
 }
 export function utilization(log,sim,dock){return sim.elapsed>0?Math.min(100,Math.round(log.busy[dock.bay]/sim.elapsed*100)):(occupied(sim,dock)?100:0);}
-export function fleetGroups(sim){return [{name:'入场',color:'#56b4ff',value:sim.fleet.filter(v=>['entering','maneuvering','approach'].includes(v.phase)).length},{name:'装货',color:'#55dfc1',value:sim.fleet.filter(v=>['waiting','docking','loading'].includes(v.phase)).length},{name:'离场',color:'#ffbd77',value:sim.fleet.filter(v=>['departing','exiting'].includes(v.phase)).length}];}
+export function fleetGroups(sim){return [{name:'入场',color:'#5486e7',value:sim.fleet.filter(v=>['entering','maneuvering','approach'].includes(v.phase)).length},{name:'装货',color:'#57b89d',value:sim.fleet.filter(v=>['waiting','docking','loading'].includes(v.phase)).length},{name:'离场',color:'#dca467',value:sim.fleet.filter(v=>['departing','exiting'].includes(v.phase)).length}];}
 const n=value=>Number(value.toFixed(2));
 export function ringChart(groups,center,label,size=120){
   const total=groups.reduce((sum,g)=>sum+g.value,0),circumference=2*Math.PI*43;let offset=0;
